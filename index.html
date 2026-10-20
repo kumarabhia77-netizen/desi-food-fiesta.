@@ -134,7 +134,7 @@ body.ig #bgm,body:not(.ig) #bgg{display:none}
 <div id="sp"><div class="em">🍔🍕🥟</div><h2>Desi Food Fiesta</h2><p class="sub">Match · Munch · Win</p><button class="btn" id="go">Play</button><div class="row"><button id="dly">🎁 Daily<i class="dot ddl" hidden></i></button><button id="sps">🎡 Spin<i class="dot dsp" hidden></i></button><button id="msp">📋 Tasks<i class="dot dms" hidden></i></button><button id="shp">🛒 Shop</button><button id="set">⚙️ Settings</button></div></div>
 <script>
 // ===== ADS CONFIG: Google's official TEST ids. Swap for your own before release =====
-const ADS={app:'ca-app-pub-3940256099942544~3347511713',banner:'ca-app-pub-3940256099942544/6300978111',interstitial:'ca-app-pub-3940256099942544/1033173712',rewarded:'ca-app-pub-3940256099942544/5224354917'};
+const ADS={app:'ca-app-pub-1101387414758437~3417408277',banner:'ca-app-pub-1101387414758437/3912232292',interstitial:'ca-app-pub-1101387414758437/2729556293',rewarded:'ca-app-pub-1101387414758437/7790311287'};
 const TESTING=true; // set to false for release, after putting YOUR AdMob unit ids in ADS above
 const AM=()=>{try{return window.Capacitor&&Capacitor.isNativePlatform()?Capacitor.Plugins.AdMob:null}catch(e){return null}};
 async function initAds(){const a=AM();if(!a)return;try{await a.initialize({initializeForTesting:TESTING});const i=await a.requestConsentInfo();if(i.isConsentFormAvailable&&i.status==='REQUIRED')await a.showConsentForm()}catch(e){}}
