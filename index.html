@@ -141,8 +141,35 @@ async function initAds(){const a=AM();if(!a)return;try{await a.initialize({initi
 function showBanner(){const a=AM();if(!a){$('#bn').hidden=false;return}a.showBanner({adId:ADS.banner,adSize:'ADAPTIVE_BANNER',position:'BOTTOM_CENTER',margin:0,isTesting:TESTING}).catch(()=>{})}
 function hideBanner(){const a=AM();if(!a){$('#bn').hidden=true;return}a.removeBanner().catch(()=>{})}
 function adFail(){show('<h2>No ad ready</h2><p class="note">Please try again in a moment.</p><button class="btn" id="cl">OK</button>');$('#cl').onclick=close}
-async function showRewardedAd(cb){const a=AM();if(!a)return simAd(cb);let ok=false;const hs=[];try{hs.push(await a.addListener('onRewardedVideoAdReward',()=>{ok=true}));const d=new Promise(r=>a.addListener('onRewardedVideoAdDismissed',r).then(h=>hs.push(h)));await a.prepareRewardVideoAd({adId:ADS.rewarded,isTesting:TESTING});await a.showRewardVideoAd();await d}catch(e){hs.forEach(h=>h.remove());return adFail()}hs.forEach(h=>h.remove());if(ok)cb()}
-async function showInterstitial(){const a=AM();if(!a)return new Promise(r=>simAd(r));try{await a.prepareInterstitial({adId:ADS.interstitial,isTesting:TESTING});await a.showInterstitial()}catch(e){}}
+async function showRewardedAd(cb){
+  const a=AM(); if(!a) return simAd(cb);
+  const keep=[...$('#mc').childNodes], was=!$('#modal').hidden;
+  const back=()=>{ if(was) $('#mc').replaceChildren(...keep); else close(); };
+  show('<h2>Loading ad…</h2><p class="note">Please wait a few seconds</p>');
+  let ok=false, done=false, wd=null; const hs=[];
+  const end=(kind)=>{
+    if(done) return; done=true; clearTimeout(wd);
+    hs.forEach(h=>{try{h.remove()}catch(e){}});
+    if(ok){ back(); cb(); }
+    else if(kind==='dismiss'){ back(); }
+    else { show('<h2>No ad ready</h2><p class="note">Please try again in a moment.</p><button class="btn" id="cl">OK</button>'); $('#cl').onclick=back; }
+  };
+  wd=setTimeout(()=>end('fail'),20000);
+  try{
+    hs.push(await a.addListener('onRewardedVideoAdReward',()=>{ok=true}));
+    hs.push(await a.addListener('onRewardedVideoAdDismissed',()=>setTimeout(()=>end('dismiss'),300)));
+    hs.push(await a.addListener('onRewardedVideoAdFailedToLoad',()=>end('fail')));
+    hs.push(await a.addListener('onRewardedVideoAdFailedToShow',()=>end('fail')));
+    hs.push(await a.addListener('onRewardedVideoAdShowed',()=>{clearTimeout(wd);wd=setTimeout(()=>end('dismiss'),240000)}));
+    await a.prepareRewardVideoAd({adId:ADS.rewarded,isTesting:TESTING});
+    clearTimeout(wd);wd=setTimeout(()=>end('dismiss'),240000);
+    a.showRewardVideoAd().catch(()=>{});
+  }catch(e){ end('fail') }
+}
+async function showInterstitial(){
+  const a=AM(); if(!a) return new Promise(r=>simAd(r));
+  try{ await Promise.race([(async()=>{await a.prepareInterstitial({adId:ADS.interstitial,isTesting:TESTING});await a.showInterstitial()})(),sleep(12000)]) }catch(e){}
+}
 function privacyUI(){const a=AM();show('<h2>Privacy</h2><p class="note">This game shows ads from Google AdMob, which may use your device advertising ID. Game progress is saved only on your device. We do not collect your name, contacts or location.</p>'+(a?'<button class="btn alt" id="pc">Ad choices</button>':'')+'<button class="btn" id="cl">OK</button>');$('#cl').onclick=close;if(a)$('#pc').onclick=()=>{a.showPrivacyOptionsForm&&a.showPrivacyOptionsForm().catch(()=>{})}}
 async function maybeAd(){S.ic=(S.ic||0)+1;if(cur>3&&S.ic>=3&&Date.now()-(S.la||0)>120000){S.ic=0;S.la=Date.now();save();await showInterstitial()}}
 const $=s=>document.querySelector(s),N=8,F=['🍔','🍕','🥟','🌀','🌯','🟤','🥠','🟠'],sleep=ms=>new Promise(r=>setTimeout(r,ms));
