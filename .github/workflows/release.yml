@@ -1,0 +1,47 @@
+name: Build Release APK
+on:
+  workflow_dispatch:
+    inputs:
+      real_ads:
+        description: "Real ads? true or false"
+        default: "false"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      ADMOB_APP_ID: ca-app-pub-1101387414758437~3417408277
+      KS_PASS: ${{ secrets.KS_PASS }}
+      REAL: ${{ inputs.real_ads }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 22}
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: 21}
+      - run: |
+          mkdir www && cp index.html www/index.html
+          if [ "$REAL" = "true" ]; then sed -i 's/const TESTING=true;/const TESTING=false;/' www/index.html; fi
+          npm install
+          npx cap add android
+          M=android/app/src/main/AndroidManifest.xml
+          sed -i 's#</application>#<meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="'"$ADMOB_APP_ID"'"/></application>#' $M
+          sed -i 's#<activity#<activity android:screenOrientation="portrait"#' $M
+          if [ -f DesiFoodFiesta-android-res.zip ]; then
+            R=android/app/src/main/res
+            rm -f $R/drawable/ic_launcher_background.xml $R/drawable-v24/ic_launcher_foreground.xml
+            unzip -o DesiFoodFiesta-android-res.zip -d android/app/src/main
+          fi
+          sed -i "s/versionCode 1/versionCode ${{ github.run_number }}/" android/app/build.gradle
+          npx cap sync android
+          cd android && chmod +x gradlew && ./gradlew assembleRelease && cd ..
+          openssl enc -d -aes-256-cbc -pbkdf2 -pass env:KS_PASS -in upload.enc -out upload.jks
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          $BT/zipalign -p -f 4 android/app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
+          $BT/apksigner sign --ks upload.jks --ks-pass env:KS_PASS --key-pass env:KS_PASS --out DesiFoodFiesta-Yuvraj-v1.apk aligned.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DesiFoodFiesta-release-apk
+          path: DesiFoodFiesta-Yuvraj-v1.apk
+          
