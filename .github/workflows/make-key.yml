@@ -1,0 +1,17 @@
+name: Make Upload Key
+on: [workflow_dispatch]
+jobs:
+  key:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      KS_PASS: ${{ secrets.KS_PASS }}
+    steps:
+      - run: |
+          keytool -genkeypair -keystore upload.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000 -storepass "$KS_PASS" -keypass "$KS_PASS" -dname "CN=Yuvraj Gupta, C=IN"
+          openssl enc -aes-256-cbc -pbkdf2 -salt -pass env:KS_PASS -in upload.jks -out upload.enc
+      - uses: actions/upload-artifact@v4
+        with:
+          name: upload-key
+          path: upload.enc
