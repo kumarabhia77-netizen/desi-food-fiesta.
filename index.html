@@ -166,6 +166,31 @@ async function showRewardedAd(cb){
     a.showRewardVideoAd().catch(()=>{});
   }catch(e){ end('fail') }
 }
+async function showRewardedAd(cb){
+  const a=AM(); if(!a) return simAd(cb);
+  const keep=[...$('#mc').childNodes], was=!$('#modal').hidden;
+  const back=()=>{ if(was) $('#mc').replaceChildren(...keep); else close(); };
+  show('<h2>Loading ad…</h2><p class="note">Please wait a few seconds</p>');
+  let ok=false, done=false, wd=null; const hs=[];
+  const end=(kind)=>{
+    if(done) return; done=true; clearTimeout(wd);
+    hs.forEach(h=>{try{h.remove()}catch(e){}});
+    if(ok){ back(); cb(); }
+    else if(kind==='dismiss'){ back(); }
+    else { show('<h2>No ad ready</h2><p class="note">Please try again in a moment.</p><button class="btn" id="cl">OK</button>'); $('#cl').onclick=back; }
+  };
+  wd=setTimeout(()=>end('fail'),20000);
+  try{
+    hs.push(await a.addListener('onRewardedVideoAdReward',()=>{ok=true}));
+    hs.push(await a.addListener('onRewardedVideoAdDismissed',()=>setTimeout(()=>end('dismiss'),300)));
+    hs.push(await a.addListener('onRewardedVideoAdFailedToLoad',()=>end('fail')));
+    hs.push(await a.addListener('onRewardedVideoAdFailedToShow',()=>end('fail')));
+    hs.push(await a.addListener('onRewardedVideoAdShowed',()=>{clearTimeout(wd);wd=setTimeout(()=>end('dismiss'),240000)}));
+    await a.prepareRewardVideoAd({adId:ADS.rewarded,isTesting:TESTING});
+    clearTimeout(wd);wd=setTimeout(()=>end('dismiss'),240000);
+    a.showRewardVideoAd().catch(()=>{});
+  }catch(e){ end('fail') }
+}
 async function showInterstitial(){
   const a=AM(); if(!a) return new Promise(r=>simAd(r));
   try{ await Promise.race([(async()=>{await a.prepareInterstitial({adId:ADS.interstitial,isTesting:TESTING});await a.showInterstitial()})(),sleep(12000)]) }catch(e){}
